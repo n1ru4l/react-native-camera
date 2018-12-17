@@ -117,7 +117,7 @@ abstract class CameraViewImpl {
 
         void onCameraClosed();
 
-        void onPictureTaken(byte[] data, int deviceOrientation);
+        void onPictureTaken(byte[] data, int deviceOrientation, boolean useFrame);
 
         void onVideoRecorded(String path, int videoOrientation, int deviceOrientation);
 

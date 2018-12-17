@@ -17,16 +17,20 @@
 package com.google.android.cameraview;
 
 import android.annotation.SuppressLint;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaRecorder;
 import android.os.Build;
 import android.support.v4.util.SparseArrayCompat;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
 import com.facebook.react.bridge.ReadableMap;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -445,27 +449,64 @@ class Camera1 extends CameraViewImpl implements MediaRecorder.OnInfoListener,
                 mCamera.setParameters(mCameraParameters);
             }
 
-            mCamera.takePicture(null, null, null, new Camera.PictureCallback() {
-                @Override
-                public void onPictureTaken(byte[] data, Camera camera) {
-                    isPictureCaptureInProgress.set(false);
-                    camera.cancelAutoFocus();
-                    if (options.hasKey("pauseAfterCapture") && !options.getBoolean("pauseAfterCapture")) {
-                        camera.startPreview();
-                        mIsPreviewActive = true;
-                        if (mIsScanning) {
-                            camera.setPreviewCallback(Camera1.this);
-                        }
-                    } else {
-                        camera.stopPreview();
-                        mIsPreviewActive = false;
-                        camera.setPreviewCallback(null);
-                    }
+            final boolean useFrame = options.hasKey("useFrame") && options.getBoolean("useFrame");
 
-                    mOrientation = Constants.ORIENTATION_AUTO;
-                    mCallback.onPictureTaken(data, displayOrientationToOrientationEnum(mDeviceOrientation));
-                }
-            });
+            if (useFrame) {
+                mCamera.stopPreview();
+                mIsPreviewActive = false;
+
+                mCamera.setOneShotPreviewCallback(new Camera.PreviewCallback() {
+                    @Override
+                    public void onPreviewFrame(byte[] data, Camera camera) {
+                        isPictureCaptureInProgress.set(false);
+//                        camera.cancelAutoFocus();
+//                        if (options.hasKey("pauseAfterCapture") && !options.getBoolean("pauseAfterCapture")) {
+//                            camera.startPreview();
+//                            mIsPreviewActive = true;
+//                            if (mIsScanning) {
+//                                camera.setPreviewCallback(Camera1.this);
+//                            }
+//                        } else {
+//                            camera.stopPreview();
+//                            mIsPreviewActive = false;
+//                            camera.setPreviewCallback(null);
+//                        }
+                        Log.d("TEST", "IT LOGS");
+                        mOrientation = Constants.ORIENTATION_AUTO;
+
+                        ByteArrayOutputStream out = new ByteArrayOutputStream();
+                        Camera.Size size = mCameraParameters.getPreviewSize();
+                        YuvImage image = new YuvImage(data, mCameraParameters.getPreviewFormat(),
+                                size.width, size.height, null);
+                        image.compressToJpeg(new Rect(0, 0, size.width, size.height), 99, out);
+                        byte[] imageBytes = out.toByteArray();
+
+
+                        mCallback.onPictureTaken(imageBytes, displayOrientationToOrientationEnum(mDeviceOrientation), useFrame);
+                    }
+                });
+            } else {
+                mCamera.takePicture(null, null, null, new Camera.PictureCallback() {
+                    @Override
+                    public void onPictureTaken(byte[] data, Camera camera) {
+                        isPictureCaptureInProgress.set(false);
+                        camera.cancelAutoFocus();
+                        if (options.hasKey("pauseAfterCapture") && !options.getBoolean("pauseAfterCapture")) {
+                            camera.startPreview();
+                            mIsPreviewActive = true;
+                            if (mIsScanning) {
+                                camera.setPreviewCallback(Camera1.this);
+                            }
+                        } else {
+                            camera.stopPreview();
+                            mIsPreviewActive = false;
+                            camera.setPreviewCallback(null);
+                        }
+                        mOrientation = Constants.ORIENTATION_AUTO;
+                        mCallback.onPictureTaken(data, displayOrientationToOrientationEnum(mDeviceOrientation), useFrame);
+                    }
+                });
+            }
         }
     }
 

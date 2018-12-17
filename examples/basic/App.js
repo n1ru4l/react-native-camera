@@ -1,6 +1,16 @@
 /* eslint-disable no-console */
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Slider } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Slider,
+  PermissionsAndroid,
+  Platform,
+  CameraRoll,
+  ImageBackground,
+} from 'react-native';
 // eslint-disable-next-line import/no-unresolved
 import { RNCamera } from 'react-native-camera';
 
@@ -20,6 +30,25 @@ const wbOrder = {
   incandescent: 'auto',
 };
 
+async function requestPhotosPermission() {
+  if (Platform.OS === 'ios') {
+    return true;
+  }
+  try {
+    const granted = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+    );
+    if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+      return true;
+    } else {
+      console.log('Photos permission denied');
+    }
+  } catch (err) {
+    console.warn(err);
+  }
+  return false;
+}
+
 export default class CameraScreen extends React.Component {
   state = {
     flash: 'off',
@@ -34,11 +63,12 @@ export default class CameraScreen extends React.Component {
     showGallery: false,
     photos: [],
     recordOptions: {
-      mute: false,
-      maxDuration: 5,
-      quality: RNCamera.Constants.VideoQuality['288p'],
+      mute: true,
+      maxDuration: 2,
+      orientation: 'landscapeLeft',
     },
     isRecording: false,
+    previewUrl: null,
   };
 
   getRatios = async function() {
@@ -102,9 +132,18 @@ export default class CameraScreen extends React.Component {
 
   takePicture = async function() {
     if (this.camera) {
-      this.camera.takePictureAsync().then(data => {
-        console.log('data: ', data);
+      const data = await this.camera.takePictureAsync({
+        useFrame: true,
+        // skipProcessing: true,
+        orientation: 'portrait',
+        // pauseAfterCapture: true,
       });
+      // console.warn('takePicture', 'data', data);
+      // if (await requestPhotosPermission()) {
+      this.setState({ previewUrl: data.uri });
+      // await CameraRoll.saveToCameraRoll(data.uri);
+      // console.warn('takePicture', 'save', 'saved to camera roll');
+      // }
     }
   };
 
@@ -117,15 +156,32 @@ export default class CameraScreen extends React.Component {
           this.setState({ isRecording: true });
           const data = await promise;
           this.setState({ isRecording: false });
-          console.warn(data);
+          console.warn('recording', 'data', data);
+          if (await requestPhotosPermission()) {
+            await CameraRoll.saveToCameraRoll(data.uri);
+            console.warn('recording', 'save', 'saved to camera roll');
+          }
         }
       } catch (e) {
-        console.warn(e);
+        console.warn('recording', 'error', e.code, e.message);
       }
     }
   };
 
   renderCamera() {
+    if (this.state.previewUrl) {
+      return (
+        <ImageBackground
+          source={{ uri: this.state.previewUrl }}
+          resizeMode="contain"
+          style={{ flex: 1 }}
+        >
+          <TouchableOpacity onPress={() => this.setState({ previewUrl: null })}>
+            <Text style={{ color: 'red', backgroundColor: 'yellow' }}>BACK</Text>
+          </TouchableOpacity>
+        </ImageBackground>
+      );
+    }
     return (
       <RNCamera
         ref={ref => {
@@ -143,6 +199,7 @@ export default class CameraScreen extends React.Component {
         focusDepth={this.state.depth}
         permissionDialogTitle={'Permission to use camera'}
         permissionDialogMessage={'We need your permission to use your camera phone'}
+        defaultVideoQuality={RNCamera.Constants.VideoQuality['288p']}
       >
         <View
           style={{

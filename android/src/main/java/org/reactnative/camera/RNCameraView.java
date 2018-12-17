@@ -8,6 +8,7 @@ import android.media.CamcorderProfile;
 import android.media.MediaActionSound;
 import android.os.Build;
 import android.support.v4.content.ContextCompat;
+import android.util.Base64;
 import android.util.SparseArray;
 import android.view.View;
 import android.os.AsyncTask;
@@ -86,18 +87,26 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       }
 
       @Override
-      public void onPictureTaken(CameraView cameraView, final byte[] data, int deviceOrientation) {
+      public void onPictureTaken(CameraView cameraView, final byte[] data, int deviceOrientation, boolean useFrame) {
         Promise promise = mPictureTakenPromises.poll();
         ReadableMap options = mPictureTakenOptions.remove(promise);
         if (options.hasKey("fastMode") && options.getBoolean("fastMode")) {
             promise.resolve(null);
         }
+        if (useFrame) {
+          WritableMap response = Arguments.createMap();
+          String encoded = android.util.Base64.encodeToString(data, Base64.DEFAULT);
+          response.putString("uri", "data:image/jpeg;base64," + encoded);
+
+          promise.resolve(response);
+          return;
+        }
         final File cacheDirectory = mPictureTakenDirectories.remove(promise);
         if(Build.VERSION.SDK_INT >= 11/*HONEYCOMB*/) {
-          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, RNCameraView.this)
+          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, useFrame, RNCameraView.this)
                   .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         } else {
-          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, RNCameraView.this)
+          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, useFrame, RNCameraView.this)
                   .execute();
         }
         RNCameraViewHelper.emitPictureTakenEvent(cameraView);
@@ -221,6 +230,9 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
     // @TODO figure out why there was a z order issue in the first place and fix accordingly.
     this.removeView(this.getView());
     this.addView(this.getView(), 0);
+    if (hasCameraPermissions()) {
+      start();
+    }
   }
 
   public void setBarCodeTypes(List<String> barCodeTypes) {

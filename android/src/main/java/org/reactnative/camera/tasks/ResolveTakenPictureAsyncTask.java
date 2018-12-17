@@ -31,14 +31,16 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
     private File mCacheDirectory;
     private Bitmap mBitmap;
     private int mDeviceOrientation;
+    private boolean mUseFrame;
     private PictureSavedDelegate mPictureSavedDelegate;
 
-    public ResolveTakenPictureAsyncTask(byte[] imageData, Promise promise, ReadableMap options, File cacheDirectory, int deviceOrientation, PictureSavedDelegate delegate) {
+    public ResolveTakenPictureAsyncTask(byte[] imageData, Promise promise, ReadableMap options, File cacheDirectory, int deviceOrientation, boolean useFrame, PictureSavedDelegate delegate) {
         mPromise = promise;
         mOptions = options;
         mImageData = imageData;
         mCacheDirectory = cacheDirectory;
         mDeviceOrientation = deviceOrientation;
+        mUseFrame = useFrame;
         mPictureSavedDelegate = delegate;
     }
 
@@ -49,6 +51,12 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
     @Override
     protected WritableMap doInBackground(Void... voids) {
         WritableMap response = Arguments.createMap();
+        if (mUseFrame) {
+            String encoded = Base64.encodeToString(mImageData, Base64.DEFAULT);
+            response.putString("uri", "data:image/jpeg;base64," + encoded);
+            return response;
+        }
+
         ByteArrayInputStream inputStream = null;
 
         response.putInt("deviceOrientation", mDeviceOrientation);
