@@ -302,6 +302,10 @@ export default class Camera extends React.Component<PropsType, StateType> {
     return await CameraManager.takePicture(options, this._cameraHandle);
   }
 
+  takePictureSync(options = {}) {
+    CameraManager.takePictureSync(options, this._cameraHandle);
+  }
+
   async getSupportedRatiosAsync() {
     if (Platform.OS === 'android') {
       return await CameraManager.getSupportedRatios(this._cameraHandle);

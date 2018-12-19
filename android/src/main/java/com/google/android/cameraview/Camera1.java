@@ -449,29 +449,27 @@ class Camera1 extends CameraViewImpl implements MediaRecorder.OnInfoListener,
                 mCamera.setParameters(mCameraParameters);
             }
 
-            final boolean useFrame = options.hasKey("useFrame") && options.getBoolean("useFrame");
+            final boolean isSyncMode = options.hasKey("isSyncMode") && options.getBoolean("isSyncMode");
 
-            if (useFrame) {
-                mCamera.stopPreview();
+            if (isSyncMode) {
                 mIsPreviewActive = false;
 
                 mCamera.setOneShotPreviewCallback(new Camera.PreviewCallback() {
                     @Override
                     public void onPreviewFrame(byte[] data, Camera camera) {
-                        isPictureCaptureInProgress.set(false);
-//                        camera.cancelAutoFocus();
-//                        if (options.hasKey("pauseAfterCapture") && !options.getBoolean("pauseAfterCapture")) {
-//                            camera.startPreview();
-//                            mIsPreviewActive = true;
-//                            if (mIsScanning) {
-//                                camera.setPreviewCallback(Camera1.this);
-//                            }
-//                        } else {
-//                            camera.stopPreview();
-//                            mIsPreviewActive = false;
-//                            camera.setPreviewCallback(null);
-//                        }
-                        Log.d("TEST", "IT LOGS");
+                        camera.cancelAutoFocus();
+                        if (options.hasKey("pauseAfterCapture") && !options.getBoolean("pauseAfterCapture")) {
+                            camera.startPreview();
+                            mIsPreviewActive = true;
+                            if (mIsScanning) {
+                                camera.setPreviewCallback(Camera1.this);
+                            }
+                        } else {
+                            camera.stopPreview();
+                            mIsPreviewActive = false;
+                            camera.setPreviewCallback(null);
+                        }
+
                         mOrientation = Constants.ORIENTATION_AUTO;
 
                         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -481,8 +479,7 @@ class Camera1 extends CameraViewImpl implements MediaRecorder.OnInfoListener,
                         image.compressToJpeg(new Rect(0, 0, size.width, size.height), 99, out);
                         byte[] imageBytes = out.toByteArray();
 
-
-                        mCallback.onPictureTaken(imageBytes, displayOrientationToOrientationEnum(mDeviceOrientation), useFrame);
+                        mCallback.onPictureTaken(imageBytes, displayOrientationToOrientationEnum(mDeviceOrientation), isSyncMode);
                     }
                 });
             } else {
@@ -503,7 +500,7 @@ class Camera1 extends CameraViewImpl implements MediaRecorder.OnInfoListener,
                             camera.setPreviewCallback(null);
                         }
                         mOrientation = Constants.ORIENTATION_AUTO;
-                        mCallback.onPictureTaken(data, displayOrientationToOrientationEnum(mDeviceOrientation), useFrame);
+                        mCallback.onPictureTaken(data, displayOrientationToOrientationEnum(mDeviceOrientation), isSyncMode);
                     }
                 });
             }

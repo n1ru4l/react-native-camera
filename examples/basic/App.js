@@ -69,6 +69,7 @@ export default class CameraScreen extends React.Component {
     },
     isRecording: false,
     previewUrl: null,
+    useSyncMode: false,
   };
 
   getRatios = async function() {
@@ -132,18 +133,17 @@ export default class CameraScreen extends React.Component {
 
   takePicture = async function() {
     if (this.camera) {
+      if (this.state.useSyncMode) {
+        this.camera.takePictureSync({ pauseAfterCapture: true });
+        return;
+      }
+
       const data = await this.camera.takePictureAsync({
-        useFrame: true,
-        // skipProcessing: true,
+        skipProcessing: true,
         orientation: 'portrait',
         // pauseAfterCapture: true,
       });
-      // console.warn('takePicture', 'data', data);
-      // if (await requestPhotosPermission()) {
       this.setState({ previewUrl: data.uri });
-      // await CameraRoll.saveToCameraRoll(data.uri);
-      // console.warn('takePicture', 'save', 'saved to camera roll');
-      // }
     }
   };
 
@@ -200,6 +200,10 @@ export default class CameraScreen extends React.Component {
         permissionDialogTitle={'Permission to use camera'}
         permissionDialogMessage={'We need your permission to use your camera phone'}
         defaultVideoQuality={RNCamera.Constants.VideoQuality['288p']}
+        onPictureSaved={ev => {
+          console.log('LUBITZ', ev);
+          this.setState({ previewUrl: ev.data.uri });
+        }}
       >
         <View
           style={{
@@ -217,6 +221,14 @@ export default class CameraScreen extends React.Component {
           </TouchableOpacity>
           <TouchableOpacity style={styles.flipButton} onPress={this.toggleWB.bind(this)}>
             <Text style={styles.flipText}> WB: {this.state.whiteBalance} </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.flipButton}
+            onPress={() => {
+              this.setState(state => ({ useSyncMode: !state.useSyncMode }));
+            }}
+          >
+            <Text style={styles.flipText}> Mode: {this.state.useSyncMode ? 'Sync' : 'Async'} </Text>
           </TouchableOpacity>
         </View>
         <View

@@ -31,16 +31,16 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
     private File mCacheDirectory;
     private Bitmap mBitmap;
     private int mDeviceOrientation;
-    private boolean mUseFrame;
+    private boolean mIsSyncMode;
     private PictureSavedDelegate mPictureSavedDelegate;
 
-    public ResolveTakenPictureAsyncTask(byte[] imageData, Promise promise, ReadableMap options, File cacheDirectory, int deviceOrientation, boolean useFrame, PictureSavedDelegate delegate) {
+    public ResolveTakenPictureAsyncTask(byte[] imageData, Promise promise, ReadableMap options, File cacheDirectory, int deviceOrientation, boolean isSyncMode, PictureSavedDelegate delegate) {
         mPromise = promise;
         mOptions = options;
         mImageData = imageData;
         mCacheDirectory = cacheDirectory;
         mDeviceOrientation = deviceOrientation;
-        mUseFrame = useFrame;
+        mIsSyncMode = isSyncMode;
         mPictureSavedDelegate = delegate;
     }
 
@@ -51,9 +51,17 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
     @Override
     protected WritableMap doInBackground(Void... voids) {
         WritableMap response = Arguments.createMap();
-        if (mUseFrame) {
-            String encoded = Base64.encodeToString(mImageData, Base64.DEFAULT);
-            response.putString("uri", "data:image/jpeg;base64," + encoded);
+        if (mIsSyncMode) {
+            // the promise is just a stub we actually have to emit an event
+            try {
+                String encoded = Base64.encodeToString(mImageData, Base64.DEFAULT);
+                response.putString("uri", "data:image/jpeg;base64," + encoded);
+                return response;
+            } catch (Resources.NotFoundException e) {
+                mPromise.reject(ERROR_TAG, "Documents directory of the app could not be found.", e);
+                e.printStackTrace();
+            }
+
             return response;
         }
 
@@ -242,9 +250,9 @@ public class ResolveTakenPictureAsyncTask extends AsyncTask<Void, Void, Writable
 
         // If the response is not null everything went well and we can resolve the promise.
         if (response != null) {
-            if (mOptions.hasKey("fastMode") && mOptions.getBoolean("fastMode")) {
+            if ((mOptions.hasKey("fastMode") && mOptions.getBoolean("fastMode")) || mIsSyncMode) {
                 WritableMap wrapper = Arguments.createMap();
-                wrapper.putInt("id", mOptions.getInt("id"));
+                wrapper.putInt("id", mOptions.hasKey("id") ? mOptions.getInt("id") : 1);
                 wrapper.putMap("data", response);
                 mPictureSavedDelegate.onPictureSaved(wrapper);
             } else {

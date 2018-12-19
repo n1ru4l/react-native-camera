@@ -576,9 +576,9 @@ public class CameraView extends FrameLayout {
         }
 
         @Override
-        public void onPictureTaken(byte[] data, int deviceOrientation, boolean useFrame) {
+        public void onPictureTaken(byte[] data, int deviceOrientation, boolean isSyncMode) {
             for (Callback callback : mCallbacks) {
-                callback.onPictureTaken(CameraView.this, data, deviceOrientation, useFrame);
+                callback.onPictureTaken(CameraView.this, data, deviceOrientation, isSyncMode);
             }
         }
 
@@ -707,7 +707,7 @@ public class CameraView extends FrameLayout {
          * @param cameraView The associated {@link CameraView}.
          * @param data       JPEG data.
          */
-        public void onPictureTaken(CameraView cameraView, byte[] data, int deviceOrientation, boolean useFrame) {
+        public void onPictureTaken(CameraView cameraView, byte[] data, int deviceOrientation, boolean isSyncMode) {
         }
 
         /**

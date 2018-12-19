@@ -87,26 +87,19 @@ public class RNCameraView extends CameraView implements LifecycleEventListener, 
       }
 
       @Override
-      public void onPictureTaken(CameraView cameraView, final byte[] data, int deviceOrientation, boolean useFrame) {
+      public void onPictureTaken(CameraView cameraView, final byte[] data, int deviceOrientation, boolean isSyncMode) {
         Promise promise = mPictureTakenPromises.poll();
         ReadableMap options = mPictureTakenOptions.remove(promise);
         if (options.hasKey("fastMode") && options.getBoolean("fastMode")) {
             promise.resolve(null);
         }
-        if (useFrame) {
-          WritableMap response = Arguments.createMap();
-          String encoded = android.util.Base64.encodeToString(data, Base64.DEFAULT);
-          response.putString("uri", "data:image/jpeg;base64," + encoded);
 
-          promise.resolve(response);
-          return;
-        }
         final File cacheDirectory = mPictureTakenDirectories.remove(promise);
         if(Build.VERSION.SDK_INT >= 11/*HONEYCOMB*/) {
-          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, useFrame, RNCameraView.this)
+          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, isSyncMode, RNCameraView.this)
                   .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         } else {
-          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, useFrame, RNCameraView.this)
+          new ResolveTakenPictureAsyncTask(data, promise, options, cacheDirectory, deviceOrientation, isSyncMode, RNCameraView.this)
                   .execute();
         }
         RNCameraViewHelper.emitPictureTakenEvent(cameraView);

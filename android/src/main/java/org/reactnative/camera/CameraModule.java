@@ -2,6 +2,8 @@ package org.reactnative.camera;
 
 import android.graphics.Bitmap;
 import android.os.Build;
+import android.util.Log;
+
 import com.facebook.react.bridge.*;
 import com.facebook.react.uimanager.NativeViewHierarchyManager;
 import com.facebook.react.uimanager.UIBlock;
@@ -248,6 +250,63 @@ public class CameraModule extends ReactContextBaseJavaModule {
         });
     }
 
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  public void takePictureSync(final ReadableMap options, final int viewTag) {
+      final ReactApplicationContext context = getReactApplicationContext();
+      final File cacheDirectory = mScopedContext.getCacheDirectory();
+      UIManagerModule uiManager = context.getNativeModule(UIManagerModule.class);
+      uiManager.addUIBlock(new UIBlock() {
+          @Override
+          public void execute(NativeViewHierarchyManager nativeViewHierarchyManager) {
+              RNCameraView cameraView = (RNCameraView) nativeViewHierarchyManager.resolveView(viewTag);
+              try {
+                  Promise promise = new Promise() {
+                      @Override
+                      public void resolve(@Nullable Object value) {
+
+                      }
+
+                      @Override
+                      public void reject(String code, String message) {
+
+                      }
+
+                      @Override
+                      public void reject(String code, Throwable e) {
+
+                      }
+
+                      @Override
+                      public void reject(String code, String message, Throwable e) {
+
+                      }
+
+                      @Override
+                      public void reject(String message) {
+
+                      }
+
+                      @Override
+                      public void reject(Throwable reason) {
+
+                      }
+                  };
+                  if (cameraView.isCameraOpened()) {
+                      WritableMap writableOptions = Arguments.createMap();
+                      writableOptions.merge(options);
+                      writableOptions.putBoolean("isSyncMode", true);
+
+                      cameraView.takePicture(writableOptions, promise, cacheDirectory);
+                  } else {
+                      Log.d("E_CAMERA_UNAVAILABLE", "Camera is not running");
+                  }
+              } catch (Exception e) {
+                  Log.d("E_CAMERA_BAD_VIEWTAG", "takePictureAsync: Expected a Camera component");
+              }
+          }
+      });
+  }
+
   @ReactMethod
   public void takePicture(final ReadableMap options, final int viewTag, final Promise promise) {
     final ReactApplicationContext context = getReactApplicationContext();
@@ -261,10 +320,10 @@ public class CameraModule extends ReactContextBaseJavaModule {
             if (cameraView.isCameraOpened()) {
               cameraView.takePicture(options, promise, cacheDirectory);
             } else {
-              promise.reject("E_CAMERA_UNAVAILABLE", "Camera is not running");
+               promise.reject("E_CAMERA_UNAVAILABLE", "Camera is not running");
             }
         } catch (Exception e) {
-          promise.reject("E_CAMERA_BAD_VIEWTAG", "takePictureAsync: Expected a Camera component");
+           promise.reject("E_CAMERA_BAD_VIEWTAG", "takePictureAsync: Expected a Camera component");
         }
       }
     });
